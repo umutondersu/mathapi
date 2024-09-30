@@ -4,13 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/umutondersu/mathapi/internal/handlers"
+	"github.com/umutondersu/mathapi/internal/routes"
 )
 
 func main() {
-	router := http.NewServeMux()
-	router.HandleFunc("/echo/{id}", handlers.EchoHandler)
-
+	router := routes.NewRouter()
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: router,
