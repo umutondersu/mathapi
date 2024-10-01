@@ -42,6 +42,8 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&numbers)
 	if err != nil {
+		// TODO: Handle non-json response for invalid types of value (Bad Request)
+
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		logger.Error("Failed to Decode response", slog.String("error", err.Error()))
 		return
