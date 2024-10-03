@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -40,12 +41,18 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers Operation
 
-	err := json.NewDecoder(r.Body).Decode(&numbers)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&numbers)
 	if err != nil {
-		// TODO: Handle non-json response for invalid types of value (Bad Request)
-
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		logger.Error("Failed to Decode response", slog.String("error", err.Error()))
+		var unmarshalTypeError *json.UnmarshalTypeError
+		if errors.As(err, &unmarshalTypeError) {
+			http.Error(w, "number1 and number2 must be numbers", http.StatusBadRequest)
+			logger.Error("number1 and number2 must be numbers", slog.String("error", err.Error()))
+		} else {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			logger.Error("Failed to decode request body", slog.String("error", err.Error()))
+		}
 		return
 	}
 

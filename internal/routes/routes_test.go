@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -39,21 +40,25 @@ func TestEchoHandler(t *testing.T) {
 	}
 }
 
+// TODO: Add test cases for invalid keys and non-json data
 func TestAddHandler(t *testing.T) {
 	type TestOperation struct {
 		Number1 any `json:"number1"`
 		Number2 any `json:"number2"`
 	}
+
 	tests := []struct {
 		data     TestOperation
-		expected int
+		expected any
 	}{
 		{TestOperation{1, 2}, 3},
 		{TestOperation{2, 3}, 5},
 		{TestOperation{0, 0}, 0},
 		{TestOperation{-1, 1}, 0},
 		{TestOperation{-1, -1}, -2},
-		{TestOperation{string('a'), string('b')}, 195}, // TODO: expected must be something related to "Bad Request"
+		{TestOperation{5, string('b')}, "number1 and number2 must be numbers"},
+		{TestOperation{string('a'), string('b')}, "number1 and number2 must be numbers"},
+		{TestOperation{string('a'), 5}, "number1 and number2 must be numbers"},
 	}
 	for _, tt := range tests {
 		client := &http.Client{}
@@ -78,14 +83,23 @@ func TestAddHandler(t *testing.T) {
 		}
 		defer req.Body.Close()
 
-		// Read and Decode the response
-		// TODO: Handle non-json response for invalid types of value (Bad Request)
+		// Check for non-JSON response for invalid types of value (Bad Request)
+		if resp.StatusCode == http.StatusBadRequest {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("Failed to read response body: %v", err)
+			}
+			if strings.TrimSpace(string(body)) != tt.expected {
+				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
+			}
+			return
+		}
 
+		// Read and Decode the response JSON
 		var result OperationResult
-
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			t.Fatalf("Failed to decode response: %v", err)
+			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
 		}
 		if result.Result != tt.expected {
 			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
