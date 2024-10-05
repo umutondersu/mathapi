@@ -57,21 +57,23 @@ func checkInput(op *Operation, w http.ResponseWriter, r *http.Request, logger *s
 	return nil
 }
 
-func marshalResult(result OperationResult, w http.ResponseWriter, logger *slog.Logger) ([]byte, error) {
+func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog.Logger) error {
+	// Marshal the result into a JSON response
 	response, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		logger.Error("Failed to marshal response", slog.String("error", err.Error()))
-		return nil, errors.New("Failed to marshal response")
+		return errors.New("Failed to marshal response")
 	}
-	return response, nil
-}
 
-func prepareResponse(w http.ResponseWriter, response []byte) {
-	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	// Write the response. setting the content type and status code is done automatically
+	_, err = w.Write(response)
+	if err != nil {
+		logger.Error("Failed to write response", slog.String("error", err.Error()))
+		return errors.New("Failed to write response")
+	}
 
-	w.Header().Set("Content-Type", "application/json")
+	return nil
 }
 
 func handleAdd(w http.ResponseWriter, r *http.Request) {
@@ -83,12 +85,9 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := OperationResult{Result: numbers.Number1 + numbers.Number2}
-	response, err := marshalResult(result, w, logger)
-	if err != nil {
+	if err := prepareResponse(result, w, logger); err != nil {
 		return
 	}
-
-	prepareResponse(w, response)
 
 	logger.Info("Successfully added two numbers", slog.Int("result", result.Result))
 }
@@ -102,12 +101,9 @@ func handleSubstract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := OperationResult{Result: numbers.Number1 - numbers.Number2}
-	response, err := marshalResult(result, w, logger)
-	if err != nil {
+	if err := prepareResponse(result, w, logger); err != nil {
 		return
 	}
-
-	prepareResponse(w, response)
 
 	logger.Info("Successfully substracted two numbers", slog.Int("result", result.Result))
 }
