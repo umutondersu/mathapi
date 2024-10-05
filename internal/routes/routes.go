@@ -50,7 +50,7 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "number1 and number2 must be numbers", http.StatusBadRequest)
 			logger.Error("number1 and number2 must be numbers", slog.String("error", err.Error()))
 		} else {
-			http.Error(w, "Bad request", http.StatusBadRequest)
+			http.Error(w, "Bad Request", http.StatusBadRequest)
 			logger.Error("Failed to decode request body", slog.String("error", err.Error()))
 		}
 		return
