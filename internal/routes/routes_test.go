@@ -40,15 +40,19 @@ func TestEchoHandler(t *testing.T) {
 	}
 }
 
-// TODO: Add test cases for invalid keys and non-json data
 func TestAddHandler(t *testing.T) {
 	type TestOperation struct {
 		Number1 any `json:"number1"`
 		Number2 any `json:"number2"`
 	}
 
+	type TestOperationinvalidkeys struct {
+		Numb1 any `json:"numb1"`
+		Numb2 any `json:"numb2"`
+	}
+
 	tests := []struct {
-		data     TestOperation
+		data     any
 		expected any
 	}{
 		{TestOperation{1, 2}, 3},
@@ -59,6 +63,10 @@ func TestAddHandler(t *testing.T) {
 		{TestOperation{5, string('b')}, "number1 and number2 must be numbers"},
 		{TestOperation{string('a'), string('b')}, "number1 and number2 must be numbers"},
 		{TestOperation{string('a'), 5}, "number1 and number2 must be numbers"},
+		{TestOperationinvalidkeys{1, 2}, "Bad Request"},
+		{TestOperationinvalidkeys{string('a'), 2}, "Bad Request"},
+		{TestOperationinvalidkeys{string('b'), string('a')}, "Bad Request"},
+		{"This is a string request", "Bad Request"},
 	}
 	for _, tt := range tests {
 		client := &http.Client{}
