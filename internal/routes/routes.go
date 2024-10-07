@@ -32,6 +32,26 @@ type SumOperation struct {
 	Numbers []int `json:"numbers"`
 }
 
+type DivisionbyZeroError struct {
+	firstnumber int
+}
+
+func (d DivisionbyZeroError) Error() string {
+	return fmt.Sprintf("Cannot divide %v by zero", d.firstnumber)
+}
+
+type InvalidKeysError struct{}
+
+func (i InvalidKeysError) Error() string {
+	return "Bad Request"
+}
+
+type InvalidKeyValuesError struct{}
+
+func (i InvalidKeyValuesError) Error() string {
+	return "number1 and number2 must be numbers"
+}
+
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	id := r.PathValue("id")
@@ -49,12 +69,14 @@ func checkInput(op *Operation, w http.ResponseWriter, r *http.Request, logger *s
 	err := decoder.Decode(&op)
 	if err != nil {
 		var unmarshalTypeError *json.UnmarshalTypeError
+		var k InvalidKeysError
+		var v InvalidKeyValuesError
 		if errors.As(err, &unmarshalTypeError) {
-			http.Error(w, "number1 and number2 must be numbers", http.StatusBadRequest)
-			logger.Error("number1 and number2 must be numbers", slog.String("error", err.Error()))
-			return errors.New("number1 and number2 must be numbers")
+			http.Error(w, v.Error(), http.StatusBadRequest)
+			logger.Error(v.Error(), slog.String("error", err.Error()))
+			return errors.New(v.Error())
 		} else {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
+			http.Error(w, k.Error(), http.StatusBadRequest)
 			logger.Error("Failed to decode request body", slog.String("error", err.Error()))
 			return errors.New("Failed to decode request body")
 		}

@@ -20,6 +20,11 @@ type TestOperationinvalidkeys struct {
 	Numb2 any `json:"numb2"`
 }
 
+var (
+	k InvalidKeysError
+	v InvalidKeyValuesError
+)
+
 func TestEchoHandler(t *testing.T) {
 	tests := []struct {
 		expected int
@@ -60,13 +65,13 @@ func TestAddHandler(t *testing.T) {
 		{TestOperation{0, 0}, 0},
 		{TestOperation{-1, 1}, 0},
 		{TestOperation{-1, -1}, -2},
-		{TestOperation{5, string('b')}, "number1 and number2 must be numbers"},
-		{TestOperation{string('a'), string('b')}, "number1 and number2 must be numbers"},
-		{TestOperation{string('a'), 5}, "number1 and number2 must be numbers"},
-		{TestOperationinvalidkeys{1, 2}, "Bad Request"},
-		{TestOperationinvalidkeys{string('a'), 2}, "Bad Request"},
-		{TestOperationinvalidkeys{string('b'), string('a')}, "Bad Request"},
-		{"This is a string request", "Bad Request"},
+		{TestOperation{5, string('b')}, v.Error()},
+		{TestOperation{string('a'), string('b')}, v.Error()},
+		{TestOperation{string('a'), 5}, v.Error()},
+		{TestOperationinvalidkeys{1, 2}, k.Error()},
+		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
+		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
+		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
 		client := &http.Client{}
@@ -125,13 +130,13 @@ func TestSubstractdHandler(t *testing.T) {
 		{TestOperation{3, 5}, -2},
 		{TestOperation{-1, 1}, -2},
 		{TestOperation{-1, -1}, 0},
-		{TestOperation{5, string('b')}, "number1 and number2 must be numbers"},
-		{TestOperation{string('a'), string('b')}, "number1 and number2 must be numbers"},
-		{TestOperation{string('a'), 5}, "number1 and number2 must be numbers"},
-		{TestOperationinvalidkeys{1, 2}, "Bad Request"},
-		{TestOperationinvalidkeys{string('a'), 2}, "Bad Request"},
-		{TestOperationinvalidkeys{string('b'), string('a')}, "Bad Request"},
-		{"This is a string request", "Bad Request"},
+		{TestOperation{5, string('b')}, v.Error()},
+		{TestOperation{string('a'), string('b')}, v.Error()},
+		{TestOperation{string('a'), 5}, v.Error()},
+		{TestOperationinvalidkeys{1, 2}, k.Error()},
+		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
+		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
+		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
 		client := &http.Client{}
@@ -190,13 +195,13 @@ func TestMultiplyHandler(t *testing.T) {
 		{TestOperation{3, 5}, 15},
 		{TestOperation{-1, 1}, -1},
 		{TestOperation{-1, -1}, 1},
-		{TestOperation{5, string('b')}, "number1 and number2 must be numbers"},
-		{TestOperation{string('a'), string('b')}, "number1 and number2 must be numbers"},
-		{TestOperation{string('a'), 5}, "number1 and number2 must be numbers"},
-		{TestOperationinvalidkeys{1, 2}, "Bad Request"},
-		{TestOperationinvalidkeys{string('a'), 2}, "Bad Request"},
-		{TestOperationinvalidkeys{string('b'), string('a')}, "Bad Request"},
-		{"This is a string request", "Bad Request"},
+		{TestOperation{5, string('b')}, v.Error()},
+		{TestOperation{string('a'), string('b')}, v.Error()},
+		{TestOperation{string('a'), 5}, v.Error()},
+		{TestOperationinvalidkeys{1, 2}, k.Error()},
+		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
+		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
+		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
 		client := &http.Client{}
