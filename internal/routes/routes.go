@@ -14,6 +14,7 @@ func NewRouter() http.Handler {
 	router.HandleFunc("GET /echo/{id}", handleEcho)
 	router.HandleFunc("POST /add", handleAdd)
 	router.HandleFunc("POST /substract", handleSubstract)
+	router.HandleFunc("POST /multiply", handleMultiply)
 
 	return router
 }
@@ -106,4 +107,20 @@ func handleSubstract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("Successfully substracted two numbers", slog.Int("result", result.Result))
+}
+
+func handleMultiply(w http.ResponseWriter, r *http.Request) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	var numbers Operation
+
+	if err := checkInput(&numbers, w, r, logger); err != nil {
+		return
+	}
+
+	result := OperationResult{Result: numbers.Number1 * numbers.Number2}
+	if err := prepareResponse(result, w, logger); err != nil {
+		return
+	}
+
+	logger.Info("Successfully multiplied two numbers", slog.Int("result", result.Result))
 }

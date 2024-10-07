@@ -179,3 +179,68 @@ func TestSubstractdHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestMultiplyHandler(t *testing.T) {
+	tests := []struct {
+		data     any
+		expected any
+	}{
+		{TestOperation{3, 1}, 3},
+		{TestOperation{0, 0}, 0},
+		{TestOperation{3, 5}, 15},
+		{TestOperation{-1, 1}, -1},
+		{TestOperation{-1, -1}, 1},
+		{TestOperation{5, string('b')}, "number1 and number2 must be numbers"},
+		{TestOperation{string('a'), string('b')}, "number1 and number2 must be numbers"},
+		{TestOperation{string('a'), 5}, "number1 and number2 must be numbers"},
+		{TestOperationinvalidkeys{1, 2}, "Bad Request"},
+		{TestOperationinvalidkeys{string('a'), 2}, "Bad Request"},
+		{TestOperationinvalidkeys{string('b'), string('a')}, "Bad Request"},
+		{"This is a string request", "Bad Request"},
+	}
+	for _, tt := range tests {
+		client := &http.Client{}
+
+		// Encode the data to JSON
+		jsonData, err := json.Marshal(tt.data)
+		if err != nil {
+			t.Fatalf("Failed to marshal JSON: %v", err)
+		}
+
+		// Create a new HTTP request
+		req, err := http.NewRequest("POST", "http://localhost:8080/multiply", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		// Send the request usung the HTTP client
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
+		defer req.Body.Close()
+
+		// Check for non-JSON response for invalid types of value (Bad Request)
+		if resp.StatusCode == http.StatusBadRequest {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("Failed to read response body: %v", err)
+			}
+			if strings.TrimSpace(string(body)) != tt.expected {
+				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
+			}
+			return
+		}
+
+		// Read and Decode the response JSON
+		var result OperationResult
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+		}
+		if result.Result != tt.expected {
+			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
+		}
+	}
+}
