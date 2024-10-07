@@ -258,6 +258,7 @@ func TestDivideHandler(t *testing.T) {
 	}{
 		{TestOperation{3, 1}, 3},
 		{TestOperation{0, 0}, divisionbyzero.Error()},
+		{TestOperation{5, 0}, divisionbyzero.Error()},
 		{TestOperation{3, 5}, 15},
 		{TestOperation{-1, 1}, -1},
 		{TestOperation{-1, -1}, 1},

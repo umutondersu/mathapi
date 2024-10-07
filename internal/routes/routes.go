@@ -33,12 +33,10 @@ type SumOperation struct {
 	Numbers []int `json:"numbers"`
 }
 
-type DivisionbyZeroError struct {
-	firstnumber int
-}
+type DivisionbyZeroError struct{}
 
 func (d DivisionbyZeroError) Error() string {
-	return fmt.Sprintf("Cannot divide %v by zero", d.firstnumber)
+	return "Cannot divide by zero"
 }
 
 type InvalidKeysError struct{}
