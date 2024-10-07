@@ -35,7 +35,11 @@ type SumOperation struct {
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	id := r.PathValue("id")
-	w.Write([]byte("Recieved request for item: " + id))
+	_, err := w.Write([]byte("Recieved request for item: " + id))
+	if err != nil {
+		logger.Error("Failed to write response", slog.String("error", err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 	logger.Info(fmt.Sprintf("Received request for item: %s", id))
 }
 
@@ -71,6 +75,7 @@ func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog
 	_, err = w.Write(response)
 	if err != nil {
 		logger.Error("Failed to write response", slog.String("error", err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return errors.New("Failed to write response")
 	}
 
