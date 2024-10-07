@@ -249,3 +249,69 @@ func TestMultiplyHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestDivideHandler(t *testing.T) {
+	var divisionbyzero DivisionbyZeroError
+	tests := []struct {
+		data     any
+		expected any
+	}{
+		{TestOperation{3, 1}, 3},
+		{TestOperation{0, 0}, divisionbyzero.Error()},
+		{TestOperation{3, 5}, 15},
+		{TestOperation{-1, 1}, -1},
+		{TestOperation{-1, -1}, 1},
+		{TestOperation{5, string('b')}, v.Error()},
+		{TestOperation{string('a'), string('b')}, v.Error()},
+		{TestOperation{string('a'), 5}, v.Error()},
+		{TestOperationinvalidkeys{1, 2}, k.Error()},
+		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
+		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
+		{"This is a string request", k.Error()},
+	}
+	for _, tt := range tests {
+		client := &http.Client{}
+
+		// Encode the data to JSON
+		jsonData, err := json.Marshal(tt.data)
+		if err != nil {
+			t.Fatalf("Failed to marshal JSON: %v", err)
+		}
+
+		// Create a new HTTP request
+		req, err := http.NewRequest("POST", "http://localhost:8080/divide", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		// Send the request usung the HTTP client
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
+		defer req.Body.Close()
+
+		// Check for non-JSON response for invalid types of value (Bad Request)
+		if resp.StatusCode == http.StatusBadRequest {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("Failed to read response body: %v", err)
+			}
+			if strings.TrimSpace(string(body)) != tt.expected {
+				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
+			}
+			return
+		}
+
+		// Read and Decode the response JSON
+		var result OperationResult
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+		}
+		if result.Result != tt.expected {
+			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
+		}
+	}
+}

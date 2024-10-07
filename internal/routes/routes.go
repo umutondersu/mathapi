@@ -15,6 +15,7 @@ func NewRouter() http.Handler {
 	router.HandleFunc("POST /add", handleAdd)
 	router.HandleFunc("POST /substract", handleSubstract)
 	router.HandleFunc("POST /multiply", handleMultiply)
+	router.HandleFunc("POST /divide", handleDivide)
 
 	return router
 }
@@ -150,4 +151,27 @@ func handleMultiply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("Successfully multiplied two numbers", slog.Int("result", result.Result))
+}
+
+func handleDivide(w http.ResponseWriter, r *http.Request) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	var numbers Operation
+
+	if err := checkInput(&numbers, w, r, logger); err != nil {
+		return
+	}
+
+	if numbers.Number2 == 0 {
+		var divisionbyzero DivisionbyZeroError
+		logger.Error(divisionbyzero.Error(), slog.Int("number1", numbers.Number1), slog.Int("number2", numbers.Number2))
+		http.Error(w, divisionbyzero.Error(), http.StatusBadRequest)
+		return
+	}
+
+	result := OperationResult{Result: numbers.Number1 / numbers.Number2}
+	if err := prepareResponse(result, w, logger); err != nil {
+		return
+	}
+
+	logger.Info("Successfully divided two numbers", slog.Int("result", result.Result))
 }
