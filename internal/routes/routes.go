@@ -16,11 +16,12 @@ func NewRouter() http.Handler {
 	router.HandleFunc("POST /substract", handleSubstract)
 	router.HandleFunc("POST /multiply", handleMultiply)
 	router.HandleFunc("POST /divide", handleDivide)
+	router.HandleFunc("POST /sum", handleSum)
 
 	return router
 }
 
-type Operation struct {
+type BasicOperation struct {
 	Number1 int `json:"number1"`
 	Number2 int `json:"number2"`
 }
@@ -31,6 +32,10 @@ type OperationResult struct {
 
 type SumOperation struct {
 	Numbers []int `json:"numbers"`
+}
+
+type Operation interface {
+	checkInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error
 }
 
 type DivisionbyZeroError struct{}
@@ -62,7 +67,28 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger.Info(fmt.Sprintf("Received request for item: %s", id))
 }
 
-func checkInput(op *Operation, w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
+func (op *BasicOperation) checkInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&op)
+	if err != nil {
+		var unmarshalTypeError *json.UnmarshalTypeError
+		var k InvalidKeysError
+		var v InvalidKeyValuesError
+		if errors.As(err, &unmarshalTypeError) {
+			http.Error(w, v.Error(), http.StatusBadRequest)
+			logger.Error(v.Error(), slog.String("error", err.Error()))
+			return errors.New(v.Error())
+		} else {
+			http.Error(w, k.Error(), http.StatusBadRequest)
+			logger.Error("Failed to decode request body", slog.String("error", err.Error()))
+			return errors.New("Failed to decode request body")
+		}
+	}
+	return nil
+}
+
+func (op *SumOperation) checkInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&op)
@@ -105,9 +131,9 @@ func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog
 
 func handleAdd(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers Operation
+	var numbers BasicOperation
 
-	if err := checkInput(&numbers, w, r, logger); err != nil {
+	if err := numbers.checkInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -121,9 +147,9 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 
 func handleSubstract(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers Operation
+	var numbers BasicOperation
 
-	if err := checkInput(&numbers, w, r, logger); err != nil {
+	if err := numbers.checkInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -137,9 +163,9 @@ func handleSubstract(w http.ResponseWriter, r *http.Request) {
 
 func handleMultiply(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers Operation
+	var numbers BasicOperation
 
-	if err := checkInput(&numbers, w, r, logger); err != nil {
+	if err := numbers.checkInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -153,9 +179,9 @@ func handleMultiply(w http.ResponseWriter, r *http.Request) {
 
 func handleDivide(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers Operation
+	var numbers BasicOperation
 
-	if err := checkInput(&numbers, w, r, logger); err != nil {
+	if err := numbers.checkInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -172,4 +198,25 @@ func handleDivide(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("Successfully divided two numbers", slog.Int("result", result.Result))
+}
+
+func handleSum(w http.ResponseWriter, r *http.Request) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	var numbers SumOperation
+
+	if err := numbers.checkInput(w, r, logger); err != nil {
+		return
+	}
+
+	sum := 0
+	for _, num := range numbers.Numbers {
+		sum += num
+	}
+
+	result := OperationResult{Result: sum}
+	if err := prepareResponse(result, w, logger); err != nil {
+		return
+	}
+
+	logger.Info("Successfully Summed up Numbers", slog.Int("result", result.Result))
 }
