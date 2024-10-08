@@ -15,6 +15,14 @@ type TestOperation struct {
 	Number2 any `json:"number2"`
 }
 
+type TestSumOperation struct {
+	Numbers []any `json:"numbers"`
+}
+
+type TestSumOperationInvalidkey struct {
+	numbs []any `json:"numbs"`
+}
+
 type TestOperationinvalidkeys struct {
 	Numb1 any `json:"numb1"`
 	Numb2 any `json:"numb2"`
@@ -301,6 +309,67 @@ func TestDivideHandler(t *testing.T) {
 			}
 			if strings.TrimSpace(string(body)) != tt.expected {
 				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
+			}
+			return
+		}
+
+		// Read and Decode the response JSON
+		var result OperationResult
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+		}
+		if result.Result != tt.expected {
+			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
+		}
+	}
+}
+
+func TestSumHandler(t *testing.T) {
+	var v SumOperationKeyValueError
+	tests := []struct {
+		data     any
+		expected any
+	}{
+		{TestSumOperation{[]any{1, 2, 3, 4, 5}}, 15},
+		{TestSumOperation{[]any{1, -1, 0, 1, -1}}, 0},
+		{TestSumOperation{[]any{1, 2, 3, -4, -5}}, -3},
+		{TestSumOperation{[]any{5, string('b')}}, v.Error()},
+		{TestSumOperationInvalidkey{[]any{string('a'), 5}}, k.Error()},
+		{TestSumOperationInvalidkey{[]any{1, 2}}, k.Error()},
+		{"This is a string request", k.Error()},
+	}
+	for i, tt := range tests {
+		client := &http.Client{}
+
+		// Encode the data to JSON
+		jsonData, err := json.Marshal(tt.data)
+		if err != nil {
+			t.Fatalf("Failed to marshal JSON: %v", err)
+		}
+
+		// Create a new HTTP request
+		req, err := http.NewRequest("POST", "http://localhost:8080/sum", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		// Send the request usung the HTTP client
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
+		defer req.Body.Close()
+
+		// Check for non-JSON response for invalid types of value (Bad Request)
+		if resp.StatusCode == http.StatusBadRequest {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("Failed to read response body: %v", err)
+			}
+			if strings.TrimSpace(string(body)) != tt.expected {
+				t.Fatalf("At test case %v, For Bad Request Expected response to be %s, got %s", i+1, tt.expected, string(body))
 			}
 			return
 		}

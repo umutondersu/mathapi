@@ -56,6 +56,12 @@ func (i InvalidKeyValuesError) Error() string {
 	return "number1 and number2 must be numbers"
 }
 
+type SumOperationKeyValueError struct{}
+
+func (s SumOperationKeyValueError) Error() string {
+	return "numbers must be an array of numbers"
+}
+
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	id := r.PathValue("id")
@@ -95,7 +101,7 @@ func (op *SumOperation) checkInput(w http.ResponseWriter, r *http.Request, logge
 	if err != nil {
 		var unmarshalTypeError *json.UnmarshalTypeError
 		var k InvalidKeysError
-		var v InvalidKeyValuesError
+		var v SumOperationKeyValueError
 		if errors.As(err, &unmarshalTypeError) {
 			http.Error(w, v.Error(), http.StatusBadRequest)
 			logger.Error(v.Error(), slog.String("error", err.Error()))
