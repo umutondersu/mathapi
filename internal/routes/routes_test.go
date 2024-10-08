@@ -20,7 +20,7 @@ type TestSumOperation struct {
 }
 
 type TestSumOperationInvalidkey struct {
-	numbs []any `json:"numbs"`
+	Numbs []any `json:"numbs"`
 }
 
 type TestOperationinvalidkeys struct {
