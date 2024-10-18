@@ -1,4 +1,4 @@
-# Project 02 - Backend API
+# Project - Backend API
 
 The goal of this project is to create an http+json API for a calculator service.
 
