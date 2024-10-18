@@ -1,3 +1,19 @@
+# Project 02 - Backend API
+
+The goal of this project is to create an http+json API for a calculator service.
+
+## Overview
+
+This calculator is stateless, meaning that there is no data stored in a database or in memory.
+
+## Features
+
+- Input Validation
+
+- Error feedback
+
+- Logging
+
 ## Additional Tasks
 
 - [x] Add in rate limiter to prevent misuse of the API
