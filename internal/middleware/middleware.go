@@ -10,8 +10,8 @@ import (
 )
 
 func LimitMiddleware(next http.Handler) http.Handler {
-	rate := rate.Limit(5)
-	burst := 1
+	rate := rate.Limit(1)
+	burst := 5
 	limiter := ratelimit.NewIPRateLimiter(rate, burst)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
