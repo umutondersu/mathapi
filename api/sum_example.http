@@ -1,0 +1,6 @@
+POST localhost:8080/sum
+Content-Type: application/json
+
+{
+    "numbers" : [2,5]
+}

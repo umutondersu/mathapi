@@ -1,0 +1,8 @@
+
+POST localhost:8080/divide
+Content-Type: application/json
+
+{
+    "number1": 0,
+    "number2": 0
+}

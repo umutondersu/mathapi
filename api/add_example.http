@@ -1,0 +1,7 @@
+POST localhost:8080/add
+Content-Type: application/json
+
+{
+    "number1": 5,
+    "number2": 2
+}
