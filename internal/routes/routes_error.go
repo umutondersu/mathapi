@@ -12,14 +12,14 @@ func (i InvalidKeysError) Error() string {
 	return "Bad Request"
 }
 
-type InvalidKeyValuesError struct{}
+type BOValuesError struct{}
 
-func (i InvalidKeyValuesError) Error() string {
+func (i BOValuesError) Error() string {
 	return "number1 and number2 must be numbers"
 }
 
-type SumOperationKeyValueError struct{}
+type SOValueError struct{}
 
-func (s SumOperationKeyValueError) Error() string {
+func (s SOValueError) Error() string {
 	return "numbers must be an array of numbers"
 }

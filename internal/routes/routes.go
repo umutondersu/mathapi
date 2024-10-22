@@ -13,7 +13,7 @@ func NewRouter() http.Handler {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /echo/{id}", handleEcho)
 	router.HandleFunc("POST /add", handleAdd)
-	router.HandleFunc("POST /substract", handleSubstract)
+	router.HandleFunc("POST /subtract", handleSubtract)
 	router.HandleFunc("POST /multiply", handleMultiply)
 	router.HandleFunc("POST /divide", handleDivide)
 	router.HandleFunc("POST /sum", handleSum)
@@ -35,13 +35,15 @@ type SumOperation struct {
 }
 
 type Operation interface {
-	checkInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error
+	decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error
 }
 
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	id := r.PathValue("id")
-	_, err := w.Write([]byte("Recieved request for item: " + id))
+	// id := r.PathValue("id")  // Pathvalue does not work with httptest
+	id := r.URL.Path[len("/echo/"):]
+
+	_, err := w.Write([]byte("Received request for item: " + id))
 	if err != nil {
 		logger.Error("Failed to write response", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -49,46 +51,39 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger.Info(fmt.Sprintf("Received request for item: %s", id))
 }
 
-func (op *BasicOperation) checkInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
+func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op Operation) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&op)
 	if err != nil {
+		var errorMsg string
 		var unmarshalTypeError *json.UnmarshalTypeError
-		var k InvalidKeysError
-		var v InvalidKeyValuesError
+
 		if errors.As(err, &unmarshalTypeError) {
-			http.Error(w, v.Error(), http.StatusBadRequest)
-			logger.Error(v.Error(), slog.String("error", err.Error()))
-			return errors.New(v.Error())
+			switch op.(type) {
+			case *SumOperation:
+				errorMsg = SOValueError{}.Error()
+			case *BasicOperation:
+				errorMsg = BOValuesError{}.Error()
+			}
 		} else {
-			http.Error(w, k.Error(), http.StatusBadRequest)
-			logger.Error("Failed to decode request body", slog.String("error", err.Error()))
-			return errors.New("Failed to decode request body")
+			errorMsg = InvalidKeysError{}.Error()
 		}
+
+		http.Error(w, errorMsg, http.StatusBadRequest)
+		logger.Error(errorMsg, slog.String("error", err.Error()))
+
+		return errors.New(errorMsg)
 	}
 	return nil
 }
 
-func (op *SumOperation) checkInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&op)
-	if err != nil {
-		var unmarshalTypeError *json.UnmarshalTypeError
-		var k InvalidKeysError
-		var v SumOperationKeyValueError
-		if errors.As(err, &unmarshalTypeError) {
-			http.Error(w, v.Error(), http.StatusBadRequest)
-			logger.Error(v.Error(), slog.String("error", err.Error()))
-			return errors.New(v.Error())
-		} else {
-			http.Error(w, k.Error(), http.StatusBadRequest)
-			logger.Error("Failed to decode request body", slog.String("error", err.Error()))
-			return errors.New("Failed to decode request body")
-		}
-	}
-	return nil
+func (op *BasicOperation) decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
+	return decodeInput(w, r, logger, op)
+}
+
+func (op *SumOperation) decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
+	return decodeInput(w, r, logger, op)
 }
 
 func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog.Logger) error {
@@ -115,7 +110,7 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.checkInput(w, r, logger); err != nil {
+	if err := numbers.decodeInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -127,11 +122,11 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 	logger.Info("Successfully added two numbers", slog.Int("result", result.Result))
 }
 
-func handleSubstract(w http.ResponseWriter, r *http.Request) {
+func handleSubtract(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.checkInput(w, r, logger); err != nil {
+	if err := numbers.decodeInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -140,14 +135,14 @@ func handleSubstract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Info("Successfully substracted two numbers", slog.Int("result", result.Result))
+	logger.Info("Successfully subtracked two numbers", slog.Int("result", result.Result))
 }
 
 func handleMultiply(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.checkInput(w, r, logger); err != nil {
+	if err := numbers.decodeInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -163,7 +158,7 @@ func handleDivide(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.checkInput(w, r, logger); err != nil {
+	if err := numbers.decodeInput(w, r, logger); err != nil {
 		return
 	}
 
@@ -186,7 +181,7 @@ func handleSum(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers SumOperation
 
-	if err := numbers.checkInput(w, r, logger); err != nil {
+	if err := numbers.decodeInput(w, r, logger); err != nil {
 		return
 	}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -30,25 +31,27 @@ type TestOperationinvalidkeys struct {
 
 var (
 	k InvalidKeysError
-	v InvalidKeyValuesError
+	v BOValuesError
 )
 
 func TestEchoHandler(t *testing.T) {
 	tests := []struct {
-		expected int
+		request          int
+		expectedResponse string
 	}{
-		{1},
-		{2},
-		{-1},
-		{0},
+		{1, "Received request for item: 1"},
+		{2, "Received request for item: 2"},
+		{-1, "Received request for item: -1"},
+		{0, "Received request for item: 0"},
 	}
 
 	for _, tt := range tests {
-		client := &http.Client{}
-		resp, err := client.Get(fmt.Sprintf("http://localhost:8080/echo/%d", tt.expected))
-		if err != nil {
-			t.Fatalf("Failed to get response: %v", err)
-		}
+		req := httptest.NewRequest("GET", fmt.Sprintf("/echo/%d", tt.request), nil)
+		w := httptest.NewRecorder()
+
+		handleEcho(w, req)
+
+		resp := w.Result()
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
@@ -56,10 +59,9 @@ func TestEchoHandler(t *testing.T) {
 			t.Fatalf("Failed to read response body: %v", err)
 		}
 
-		if string(body) != fmt.Sprintf("Recieved request for item: %d", tt.expected) {
-			t.Fatalf("Expected response to be Recieved request for item: %d, got %s", tt.expected, string(body))
+		if string(body) != tt.expectedResponse {
+			t.Fatalf("Expected response to be %s, got %s", tt.expectedResponse, string(body))
 		}
-
 	}
 }
 
@@ -82,8 +84,6 @@ func TestAddHandler(t *testing.T) {
 		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
-		client := &http.Client{}
-
 		// Encode the data to JSON
 		jsonData, err := json.Marshal(tt.data)
 		if err != nil {
@@ -91,18 +91,13 @@ func TestAddHandler(t *testing.T) {
 		}
 
 		// Create a new HTTP request
-		req, err := http.NewRequest("POST", "http://localhost:8080/add", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/add", bytes.NewBuffer(jsonData))
+		w := httptest.NewRecorder()
 
-		// Send the request usung the HTTP client
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		defer req.Body.Close()
+		// Call the handler with the request
+		handleAdd(w, req)
+		resp := w.Result()
+		defer resp.Body.Close()
 
 		// Check for non-JSON response for invalid types of value (Bad Request)
 		if resp.StatusCode == http.StatusBadRequest {
@@ -120,7 +115,7 @@ func TestAddHandler(t *testing.T) {
 		var result OperationResult
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+			t.Fatalf("Failed to decode response to OperationResult: %v", err)
 		}
 		if result.Result != tt.expected {
 			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
@@ -128,7 +123,7 @@ func TestAddHandler(t *testing.T) {
 	}
 }
 
-func TestSubstractdHandler(t *testing.T) {
+func TestSubtractdHandler(t *testing.T) {
 	tests := []struct {
 		data     any
 		expected any
@@ -147,8 +142,6 @@ func TestSubstractdHandler(t *testing.T) {
 		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
-		client := &http.Client{}
-
 		// Encode the data to JSON
 		jsonData, err := json.Marshal(tt.data)
 		if err != nil {
@@ -156,18 +149,13 @@ func TestSubstractdHandler(t *testing.T) {
 		}
 
 		// Create a new HTTP request
-		req, err := http.NewRequest("POST", "http://localhost:8080/substract", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/subtract", bytes.NewBuffer(jsonData))
+		w := httptest.NewRecorder()
 
-		// Send the request usung the HTTP client
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		defer req.Body.Close()
+		// Call the handler with the request
+		handleSubtract(w, req)
+		resp := w.Result()
+		defer resp.Body.Close()
 
 		// Check for non-JSON response for invalid types of value (Bad Request)
 		if resp.StatusCode == http.StatusBadRequest {
@@ -185,7 +173,7 @@ func TestSubstractdHandler(t *testing.T) {
 		var result OperationResult
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+			t.Fatalf("Failed to decode response to OperationResult: %v", err)
 		}
 		if result.Result != tt.expected {
 			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
@@ -212,8 +200,6 @@ func TestMultiplyHandler(t *testing.T) {
 		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
-		client := &http.Client{}
-
 		// Encode the data to JSON
 		jsonData, err := json.Marshal(tt.data)
 		if err != nil {
@@ -221,18 +207,13 @@ func TestMultiplyHandler(t *testing.T) {
 		}
 
 		// Create a new HTTP request
-		req, err := http.NewRequest("POST", "http://localhost:8080/multiply", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/multiply", bytes.NewBuffer(jsonData))
+		w := httptest.NewRecorder()
 
-		// Send the request usung the HTTP client
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		defer req.Body.Close()
+		// Call the handler with the request
+		handleMultiply(w, req)
+		resp := w.Result()
+		defer resp.Body.Close()
 
 		// Check for non-JSON response for invalid types of value (Bad Request)
 		if resp.StatusCode == http.StatusBadRequest {
@@ -250,7 +231,7 @@ func TestMultiplyHandler(t *testing.T) {
 		var result OperationResult
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+			t.Fatalf("Failed to decode response to OperationResult: %v", err)
 		}
 		if result.Result != tt.expected {
 			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
@@ -279,8 +260,6 @@ func TestDivideHandler(t *testing.T) {
 		{"This is a string request", k.Error()},
 	}
 	for _, tt := range tests {
-		client := &http.Client{}
-
 		// Encode the data to JSON
 		jsonData, err := json.Marshal(tt.data)
 		if err != nil {
@@ -288,18 +267,13 @@ func TestDivideHandler(t *testing.T) {
 		}
 
 		// Create a new HTTP request
-		req, err := http.NewRequest("POST", "http://localhost:8080/divide", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/divide", bytes.NewBuffer(jsonData))
+		w := httptest.NewRecorder()
 
-		// Send the request usung the HTTP client
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		defer req.Body.Close()
+		// Call the handler with the request
+		handleDivide(w, req)
+		resp := w.Result()
+		defer resp.Body.Close()
 
 		// Check for non-JSON response for invalid types of value (Bad Request)
 		if resp.StatusCode == http.StatusBadRequest {
@@ -317,7 +291,7 @@ func TestDivideHandler(t *testing.T) {
 		var result OperationResult
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+			t.Fatalf("Failed to decode response to OperationResult: %v", err)
 		}
 		if result.Result != tt.expected {
 			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
@@ -326,7 +300,7 @@ func TestDivideHandler(t *testing.T) {
 }
 
 func TestSumHandler(t *testing.T) {
-	var v SumOperationKeyValueError
+	var v SOValueError
 	tests := []struct {
 		data     any
 		expected any
@@ -340,8 +314,6 @@ func TestSumHandler(t *testing.T) {
 		{"This is a string request", k.Error()},
 	}
 	for i, tt := range tests {
-		client := &http.Client{}
-
 		// Encode the data to JSON
 		jsonData, err := json.Marshal(tt.data)
 		if err != nil {
@@ -349,18 +321,13 @@ func TestSumHandler(t *testing.T) {
 		}
 
 		// Create a new HTTP request
-		req, err := http.NewRequest("POST", "http://localhost:8080/sum", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", "/sum", bytes.NewBuffer(jsonData))
+		w := httptest.NewRecorder()
 
-		// Send the request usung the HTTP client
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to send request: %v", err)
-		}
-		defer req.Body.Close()
+		// Call the handler with the request
+		handleSum(w, req)
+		resp := w.Result()
+		defer resp.Body.Close()
 
 		// Check for non-JSON response for invalid types of value (Bad Request)
 		if resp.StatusCode == http.StatusBadRequest {
@@ -378,7 +345,7 @@ func TestSumHandler(t *testing.T) {
 		var result OperationResult
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			t.Fatalf("Failed to decode response to TestOperationResult: %v", err)
+			t.Fatalf("Failed to decode response to OperationResult: %v", err)
 		}
 		if result.Result != tt.expected {
 			t.Fatalf("Expected response to be %d, got %d", tt.expected, result.Result)
