@@ -56,7 +56,7 @@ func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&op)
 	if err != nil {
-		var errorMsg string
+		errorMsg := InvalidKeysError{}.Error()
 		var unmarshalTypeError *json.UnmarshalTypeError
 
 		if errors.As(err, &unmarshalTypeError) {
@@ -66,13 +66,10 @@ func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op
 			case *BasicOperation:
 				errorMsg = BOValuesError{}.Error()
 			}
-		} else {
-			errorMsg = InvalidKeysError{}.Error()
 		}
 
 		http.Error(w, errorMsg, http.StatusBadRequest)
 		logger.Error(errorMsg, slog.String("error", err.Error()))
-
 		return errors.New(errorMsg)
 	}
 	return nil
