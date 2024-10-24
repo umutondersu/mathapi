@@ -34,10 +34,6 @@ type SumOperation struct {
 	Numbers []int `json:"numbers"`
 }
 
-type Operation interface {
-	decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error
-}
-
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	// id := r.PathValue("id")  // Pathvalue does not work with httptest
@@ -51,7 +47,7 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger.Info(fmt.Sprintf("Received request for item: %s", id))
 }
 
-func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op Operation) error {
+func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op interface{}) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&op)
@@ -73,14 +69,6 @@ func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op
 		return errors.New(errorMsg)
 	}
 	return nil
-}
-
-func (op *BasicOperation) decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
-	return decodeInput(w, r, logger, op)
-}
-
-func (op *SumOperation) decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger) error {
-	return decodeInput(w, r, logger, op)
 }
 
 func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog.Logger) error {
@@ -107,7 +95,7 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.decodeInput(w, r, logger); err != nil {
+	if err := decodeInput(w, r, logger, &numbers); err != nil {
 		return
 	}
 
@@ -123,7 +111,7 @@ func handleSubtract(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.decodeInput(w, r, logger); err != nil {
+	if err := decodeInput(w, r, logger, &numbers); err != nil {
 		return
 	}
 
@@ -132,14 +120,14 @@ func handleSubtract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Info("Successfully subtracked two numbers", slog.Int("result", result.Result))
+	logger.Info("Successfully subtracted two numbers", slog.Int("result", result.Result))
 }
 
 func handleMultiply(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.decodeInput(w, r, logger); err != nil {
+	if err := decodeInput(w, r, logger, &numbers); err != nil {
 		return
 	}
 
@@ -155,7 +143,7 @@ func handleDivide(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers BasicOperation
 
-	if err := numbers.decodeInput(w, r, logger); err != nil {
+	if err := decodeInput(w, r, logger, &numbers); err != nil {
 		return
 	}
 
@@ -178,7 +166,7 @@ func handleSum(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var numbers SumOperation
 
-	if err := numbers.decodeInput(w, r, logger); err != nil {
+	if err := decodeInput(w, r, logger, &numbers); err != nil {
 		return
 	}
 
