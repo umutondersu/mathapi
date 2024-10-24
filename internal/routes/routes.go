@@ -3,7 +3,6 @@ package routes
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -34,6 +33,16 @@ type SumOperation struct {
 	Numbers []int `json:"numbers"`
 }
 
+type Operation int
+
+const (
+	ADD = Operation(iota)
+	SUBTRACT
+	MULTIPLY
+	DIVIDE
+	SUM
+)
+
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	// id := r.PathValue("id")  // Pathvalue does not work with httptest
@@ -44,13 +53,13 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 		logger.Error("Failed to write response", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-	logger.Info(fmt.Sprintf("Received request for item: %s", id))
+	logger.Info("Received request for item:", slog.String("id", id))
 }
 
 func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op interface{}) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&op)
+	err := decoder.Decode(op)
 	if err != nil {
 		errorMsg := InvalidKeysError{}.Error()
 		var unmarshalTypeError *json.UnmarshalTypeError
@@ -72,7 +81,6 @@ func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op
 }
 
 func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog.Logger) error {
-	// Marshal the result into a JSON response
 	response, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -91,94 +99,94 @@ func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog
 	return nil
 }
 
+func operationHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op Operation) (OperationResult, error) {
+	var numbers BasicOperation
+	var sumNumbers SumOperation
+	var result OperationResult
+
+	if op == SUM {
+		if err := decodeInput(w, r, logger, &sumNumbers); err != nil {
+			return result, err
+		}
+	} else {
+		if err := decodeInput(w, r, logger, &numbers); err != nil {
+			return result, err
+		}
+	}
+
+	switch op {
+	case ADD:
+		result = OperationResult{Result: numbers.Number1 + numbers.Number2}
+	case SUBTRACT:
+		result = OperationResult{Result: numbers.Number1 - numbers.Number2}
+	case MULTIPLY:
+		result = OperationResult{Result: numbers.Number1 * numbers.Number2}
+	case DIVIDE:
+		if numbers.Number2 == 0 {
+			var divisionbyzero DivisionbyZeroError
+			logger.Error(divisionbyzero.Error(), slog.Int("number1", numbers.Number1), slog.Int("number2", numbers.Number2))
+			http.Error(w, divisionbyzero.Error(), http.StatusBadRequest)
+			return result, errors.New(divisionbyzero.Error())
+		}
+		result = OperationResult{Result: numbers.Number1 / numbers.Number2}
+	case SUM:
+		sum := 0
+		for _, num := range sumNumbers.Numbers {
+			sum += num
+		}
+		result = OperationResult{Result: sum}
+	default:
+		return result, errors.New("Invalid Operation")
+	}
+
+	if err := prepareResponse(result, w, logger); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+
 func handleAdd(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers BasicOperation
-
-	if err := decodeInput(w, r, logger, &numbers); err != nil {
+	result, err := operationHandler(w, r, logger, ADD)
+	if err != nil {
 		return
 	}
-
-	result := OperationResult{Result: numbers.Number1 + numbers.Number2}
-	if err := prepareResponse(result, w, logger); err != nil {
-		return
-	}
-
 	logger.Info("Successfully added two numbers", slog.Int("result", result.Result))
 }
 
 func handleSubtract(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers BasicOperation
-
-	if err := decodeInput(w, r, logger, &numbers); err != nil {
+	result, err := operationHandler(w, r, logger, SUBTRACT)
+	if err != nil {
 		return
 	}
-
-	result := OperationResult{Result: numbers.Number1 - numbers.Number2}
-	if err := prepareResponse(result, w, logger); err != nil {
-		return
-	}
-
 	logger.Info("Successfully subtracted two numbers", slog.Int("result", result.Result))
 }
 
 func handleMultiply(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers BasicOperation
-
-	if err := decodeInput(w, r, logger, &numbers); err != nil {
+	result, err := operationHandler(w, r, logger, MULTIPLY)
+	if err != nil {
 		return
 	}
-
-	result := OperationResult{Result: numbers.Number1 * numbers.Number2}
-	if err := prepareResponse(result, w, logger); err != nil {
-		return
-	}
-
 	logger.Info("Successfully multiplied two numbers", slog.Int("result", result.Result))
 }
 
 func handleDivide(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers BasicOperation
-
-	if err := decodeInput(w, r, logger, &numbers); err != nil {
+	result, err := operationHandler(w, r, logger, DIVIDE)
+	if err != nil {
 		return
 	}
-
-	if numbers.Number2 == 0 {
-		var divisionbyzero DivisionbyZeroError
-		logger.Error(divisionbyzero.Error(), slog.Int("number1", numbers.Number1), slog.Int("number2", numbers.Number2))
-		http.Error(w, divisionbyzero.Error(), http.StatusBadRequest)
-		return
-	}
-
-	result := OperationResult{Result: numbers.Number1 / numbers.Number2}
-	if err := prepareResponse(result, w, logger); err != nil {
-		return
-	}
-
 	logger.Info("Successfully divided two numbers", slog.Int("result", result.Result))
 }
 
 func handleSum(w http.ResponseWriter, r *http.Request) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	var numbers SumOperation
-
-	if err := decodeInput(w, r, logger, &numbers); err != nil {
+	result, err := operationHandler(w, r, logger, SUM)
+	if err != nil {
 		return
 	}
-
-	sum := 0
-	for _, num := range numbers.Numbers {
-		sum += num
-	}
-
-	result := OperationResult{Result: sum}
-	if err := prepareResponse(result, w, logger); err != nil {
-		return
-	}
-
-	logger.Info("Successfully Summed up Numbers", slog.Int("result", result.Result))
+	logger.Info("Successfully summed up Numbers", slog.Int("result", result.Result))
 }
