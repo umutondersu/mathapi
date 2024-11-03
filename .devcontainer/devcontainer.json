@@ -22,9 +22,7 @@
     "${localEnv:HOME}/.Xauthority:/tmp/.docker.xauth"
   ],
 
-  "forwardPorts": [8080],
-
-  "postsStartCommand": "go mod download"
+  "forwardPorts": [8080]
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
