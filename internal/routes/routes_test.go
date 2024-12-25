@@ -123,7 +123,7 @@ func TestAddHandler(t *testing.T) {
 	}
 }
 
-func TestSubtractdHandler(t *testing.T) {
+func TestSubtractHandler(t *testing.T) {
 	tests := []struct {
 		data     any
 		expected any
