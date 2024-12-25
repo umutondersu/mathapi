@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
@@ -8,6 +9,10 @@ import (
 	"github.com/umutondersu/mathapi/internal/ratelimit"
 	"golang.org/x/time/rate"
 )
+
+type contextKey string
+
+const loggerKey = contextKey("logger")
 
 func LimitMiddleware(next http.Handler) http.Handler {
 	rate := rate.Limit(1)
@@ -25,4 +30,23 @@ func LimitMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		ctx := context.WithValue(r.Context(), loggerKey, logger)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func GetLogger(r *http.Request) *slog.Logger {
+	return r.Context().Value(loggerKey).(*slog.Logger)
+}
+
+func ChainMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+	for _, middleware := range middlewares {
+		handler = middleware(handler)
+	}
+	return handler
 }

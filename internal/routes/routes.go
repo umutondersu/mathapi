@@ -5,7 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"os"
+
+	"github.com/umutondersu/mathapi/internal/middleware"
 )
 
 func NewRouter() http.Handler {
@@ -44,7 +45,7 @@ const (
 )
 
 func handleEcho(w http.ResponseWriter, r *http.Request) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := middleware.GetLogger(r)
 	// id := r.PathValue("id")  // Pathvalue does not work with httptest
 	id := r.URL.Path[len("/echo/"):]
 
@@ -147,7 +148,7 @@ func operationHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logge
 }
 
 func handleAdd(w http.ResponseWriter, r *http.Request) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := middleware.GetLogger(r)
 	result, err := operationHandler(w, r, logger, ADD)
 	if err != nil {
 		return
@@ -156,7 +157,7 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSubtract(w http.ResponseWriter, r *http.Request) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := middleware.GetLogger(r)
 	result, err := operationHandler(w, r, logger, SUBTRACT)
 	if err != nil {
 		return
@@ -165,7 +166,7 @@ func handleSubtract(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleMultiply(w http.ResponseWriter, r *http.Request) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := middleware.GetLogger(r)
 	result, err := operationHandler(w, r, logger, MULTIPLY)
 	if err != nil {
 		return
@@ -174,7 +175,7 @@ func handleMultiply(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDivide(w http.ResponseWriter, r *http.Request) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := middleware.GetLogger(r)
 	result, err := operationHandler(w, r, logger, DIVIDE)
 	if err != nil {
 		return
@@ -183,7 +184,7 @@ func handleDivide(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSum(w http.ResponseWriter, r *http.Request) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := middleware.GetLogger(r)
 	result, err := operationHandler(w, r, logger, SUM)
 	if err != nil {
 		return
