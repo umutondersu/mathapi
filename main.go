@@ -9,10 +9,14 @@ import (
 )
 
 func main() {
+	stack := middleware.CreateStack(
+		middleware.Ratelimit,
+		middleware.Logging,
+	)
 	router := routes.NewRouter()
 	server := http.Server{
 		Addr:    ":8080",
-		Handler: middleware.ChainMiddleware(router, middleware.LimitMiddleware, middleware.LoggingMiddleware),
+		Handler: stack(router),
 	}
 
 	log.Println("\nStarting server on :8080")

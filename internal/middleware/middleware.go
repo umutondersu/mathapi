@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,15 +13,17 @@ import (
 
 type contextKey string
 
+type Middleware func(http.Handler) http.Handler
+
 const loggerKey = contextKey("logger")
 
-func LimitMiddleware(next http.Handler) http.Handler {
+func Ratelimit(next http.Handler) http.Handler {
 	rate := rate.Limit(1)
 	burst := 5
 	limiter := ratelimit.NewIPRateLimiter(rate, burst)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		logger := GetLogger(r)
 		limiter := limiter.GetLimiter(r.RemoteAddr)
 		if !limiter.Allow() {
 			logger.Error("Rate limit exceeded", slog.String("ip", r.RemoteAddr))
@@ -32,7 +35,7 @@ func LimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func LoggingMiddleware(next http.Handler) http.Handler {
+func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		ctx := context.WithValue(r.Context(), loggerKey, logger)
@@ -41,12 +44,19 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 }
 
 func GetLogger(r *http.Request) *slog.Logger {
-	return r.Context().Value(loggerKey).(*slog.Logger)
+	logger, ok := r.Context().Value(loggerKey).(*slog.Logger)
+	if !ok {
+		return slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	return logger
 }
 
-func ChainMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
-	for _, middleware := range middlewares {
-		handler = middleware(handler)
+func CreateStack(middlewares ...Middleware) Middleware {
+	return func(next http.Handler) http.Handler {
+		for i := len(middlewares) - 1; i >= 0; i-- {
+			x := middlewares[i]
+			next = x(next)
+		}
+		return next
 	}
-	return handler
 }
