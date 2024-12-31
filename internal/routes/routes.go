@@ -49,8 +49,7 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 	// id := r.PathValue("id")  // Pathvalue does not work with httptest
 	id := r.URL.Path[len("/echo/"):]
 
-	_, err := w.Write([]byte("Received request for item: " + id))
-	if err != nil {
+	if _, err := w.Write([]byte("Received request for item: " + id)); err != nil {
 		logger.Error("Failed to write response", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
@@ -60,8 +59,7 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op interface{}) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	err := decoder.Decode(op)
-	if err != nil {
+	if err := decoder.Decode(op); err != nil {
 		errorMsg := InvalidKeysError{}.Error()
 		var unmarshalTypeError *json.UnmarshalTypeError
 
@@ -71,6 +69,8 @@ func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op
 				errorMsg = SOValueError{}.Error()
 			case *BasicOperation:
 				errorMsg = BOValuesError{}.Error()
+			default:
+				return errors.New("Invalid Operation")
 			}
 		}
 
@@ -90,8 +90,7 @@ func prepareResponse(result OperationResult, w http.ResponseWriter, logger *slog
 	}
 
 	// Write the response. setting the content type and status code is done automatically
-	_, err = w.Write(response)
-	if err != nil {
+	if _, err = w.Write(response); err != nil {
 		logger.Error("Failed to write response", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return errors.New("Failed to write response")
