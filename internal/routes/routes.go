@@ -46,7 +46,6 @@ const (
 
 func handleEcho(w http.ResponseWriter, r *http.Request) {
 	logger := middleware.GetLogger(r)
-	// id := r.PathValue("id")  // Pathvalue does not work with httptest
 	id := r.URL.Path[len("/echo/"):]
 
 	if _, err := w.Write([]byte("Received request for item: " + id)); err != nil {
