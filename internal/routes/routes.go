@@ -52,30 +52,33 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 		logger.Error("Failed to write response", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-	logger.Info("Received request for item:", slog.String("id", id))
+	logger.Info("Received request for item", slog.String("id", id))
 }
 
-func decodeInput(w http.ResponseWriter, r *http.Request, logger *slog.Logger, op interface{}) error {
+func decodeInput[T *BasicOperation | *SumOperation](w http.ResponseWriter, r *http.Request, logger *slog.Logger, op T) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(op); err != nil {
-		errorMsg := InvalidKeysError{}.Error()
+		apiErr := ErrInvalidKeys
 		var unmarshalTypeError *json.UnmarshalTypeError
 
 		if errors.As(err, &unmarshalTypeError) {
-			switch op.(type) {
+			switch any(op).(type) {
 			case *SumOperation:
-				errorMsg = SOValueError{}.Error()
+				apiErr = ErrInvalidSOValues
 			case *BasicOperation:
-				errorMsg = BOValuesError{}.Error()
+				apiErr = ErrInvalidBOValues
 			default:
 				return errors.New("Invalid Operation")
 			}
 		}
 
-		http.Error(w, errorMsg, http.StatusBadRequest)
-		logger.Error(errorMsg, slog.String("error", err.Error()))
-		return errors.New(errorMsg)
+		http.Error(w, apiErr.Error(), apiErr.StatusCode())
+		logger.Error("Failed to decode input",
+			slog.String("error", err.Error()),
+			slog.String("apiError", apiErr.Error()),
+			slog.String("path", r.URL.Path))
+		return apiErr
 	}
 	return nil
 }
@@ -122,10 +125,11 @@ func operationHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logge
 		result = OperationResult{Result: numbers.Number1 * numbers.Number2}
 	case DIVIDE:
 		if numbers.Number2 == 0 {
-			var divisionbyzero DivisionbyZeroError
-			logger.Error(divisionbyzero.Error(), slog.Int("number1", numbers.Number1), slog.Int("number2", numbers.Number2))
-			http.Error(w, divisionbyzero.Error(), http.StatusBadRequest)
-			return result, errors.New(divisionbyzero.Error())
+			logger.Error("Division by zero attempt",
+				slog.Int("number1", numbers.Number1),
+				slog.Int("number2", numbers.Number2))
+			http.Error(w, ErrDivisionByZero.Error(), ErrDivisionByZero.StatusCode())
+			return result, ErrDivisionByZero
 		}
 		result = OperationResult{Result: numbers.Number1 / numbers.Number2}
 	case SUM:

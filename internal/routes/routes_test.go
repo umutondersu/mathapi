@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"reflect"
 	"testing"
 )
 
@@ -28,11 +28,6 @@ type TestOperationinvalidkeys struct {
 	Numb1 any `json:"numb1"`
 	Numb2 any `json:"numb2"`
 }
-
-var (
-	k InvalidKeysError
-	v BOValuesError
-)
 
 func TestEchoHandler(t *testing.T) {
 	tests := []struct {
@@ -75,13 +70,13 @@ func TestAddHandler(t *testing.T) {
 		{TestOperation{0, 0}, 0},
 		{TestOperation{-1, 1}, 0},
 		{TestOperation{-1, -1}, -2},
-		{TestOperation{5, string('b')}, v.Error()},
-		{TestOperation{string('a'), string('b')}, v.Error()},
-		{TestOperation{string('a'), 5}, v.Error()},
-		{TestOperationinvalidkeys{1, 2}, k.Error()},
-		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
-		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
-		{"This is a string request", k.Error()},
+		{TestOperation{5, string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), 5}, ErrInvalidBOValues},
+		{TestOperationinvalidkeys{1, 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('a'), 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('b'), string('a')}, ErrInvalidKeys},
+		{"This is a string request", ErrInvalidKeys},
 	}
 	for _, tt := range tests {
 		// Encode the data to JSON
@@ -105,10 +100,10 @@ func TestAddHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read response body: %v", err)
 			}
-			if strings.TrimSpace(string(body)) != tt.expected {
+			if reflect.DeepEqual(body, tt.expected) {
 				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
 			}
-			return
+			continue
 		}
 
 		// Read and Decode the response JSON
@@ -133,13 +128,13 @@ func TestSubtractHandler(t *testing.T) {
 		{TestOperation{3, 5}, -2},
 		{TestOperation{-1, 1}, -2},
 		{TestOperation{-1, -1}, 0},
-		{TestOperation{5, string('b')}, v.Error()},
-		{TestOperation{string('a'), string('b')}, v.Error()},
-		{TestOperation{string('a'), 5}, v.Error()},
-		{TestOperationinvalidkeys{1, 2}, k.Error()},
-		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
-		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
-		{"This is a string request", k.Error()},
+		{TestOperation{5, string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), 5}, ErrInvalidBOValues},
+		{TestOperationinvalidkeys{1, 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('a'), 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('b'), string('a')}, ErrInvalidKeys},
+		{"This is a string request", ErrInvalidKeys},
 	}
 	for _, tt := range tests {
 		// Encode the data to JSON
@@ -163,10 +158,10 @@ func TestSubtractHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read response body: %v", err)
 			}
-			if strings.TrimSpace(string(body)) != tt.expected {
+			if reflect.DeepEqual(body, tt.expected) {
 				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
 			}
-			return
+			continue
 		}
 
 		// Read and Decode the response JSON
@@ -191,13 +186,13 @@ func TestMultiplyHandler(t *testing.T) {
 		{TestOperation{3, 5}, 15},
 		{TestOperation{-1, 1}, -1},
 		{TestOperation{-1, -1}, 1},
-		{TestOperation{5, string('b')}, v.Error()},
-		{TestOperation{string('a'), string('b')}, v.Error()},
-		{TestOperation{string('a'), 5}, v.Error()},
-		{TestOperationinvalidkeys{1, 2}, k.Error()},
-		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
-		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
-		{"This is a string request", k.Error()},
+		{TestOperation{5, string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), 5}, ErrInvalidBOValues},
+		{TestOperationinvalidkeys{1, 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('a'), 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('b'), string('a')}, ErrInvalidKeys},
+		{"This is a string request", ErrInvalidKeys},
 	}
 	for _, tt := range tests {
 		// Encode the data to JSON
@@ -221,10 +216,10 @@ func TestMultiplyHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read response body: %v", err)
 			}
-			if strings.TrimSpace(string(body)) != tt.expected {
+			if reflect.DeepEqual(body, tt.expected) {
 				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
 			}
-			return
+			continue
 		}
 
 		// Read and Decode the response JSON
@@ -240,24 +235,23 @@ func TestMultiplyHandler(t *testing.T) {
 }
 
 func TestDivideHandler(t *testing.T) {
-	var divisionbyzero DivisionbyZeroError
 	tests := []struct {
 		data     any
 		expected any
 	}{
 		{TestOperation{3, 1}, 3},
-		{TestOperation{0, 0}, divisionbyzero.Error()},
-		{TestOperation{5, 0}, divisionbyzero.Error()},
-		{TestOperation{3, 5}, 15},
+		{TestOperation{0, 0}, ErrDivisionByZero},
+		{TestOperation{5, 0}, ErrDivisionByZero},
+		{TestOperation{15, 5}, 3},
 		{TestOperation{-1, 1}, -1},
 		{TestOperation{-1, -1}, 1},
-		{TestOperation{5, string('b')}, v.Error()},
-		{TestOperation{string('a'), string('b')}, v.Error()},
-		{TestOperation{string('a'), 5}, v.Error()},
-		{TestOperationinvalidkeys{1, 2}, k.Error()},
-		{TestOperationinvalidkeys{string('a'), 2}, k.Error()},
-		{TestOperationinvalidkeys{string('b'), string('a')}, k.Error()},
-		{"This is a string request", k.Error()},
+		{TestOperation{5, string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), string('b')}, ErrInvalidBOValues},
+		{TestOperation{string('a'), 5}, ErrInvalidBOValues},
+		{TestOperationinvalidkeys{1, 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('a'), 2}, ErrInvalidKeys},
+		{TestOperationinvalidkeys{string('b'), string('a')}, ErrInvalidKeys},
+		{"This is a string request", ErrInvalidKeys},
 	}
 	for _, tt := range tests {
 		// Encode the data to JSON
@@ -281,10 +275,10 @@ func TestDivideHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read response body: %v", err)
 			}
-			if strings.TrimSpace(string(body)) != tt.expected {
+			if reflect.DeepEqual(body, tt.expected) {
 				t.Fatalf("For Bad Request Expected response to be %s, got %s", tt.expected, string(body))
 			}
-			return
+			continue
 		}
 
 		// Read and Decode the response JSON
@@ -300,7 +294,6 @@ func TestDivideHandler(t *testing.T) {
 }
 
 func TestSumHandler(t *testing.T) {
-	var v SOValueError
 	tests := []struct {
 		data     any
 		expected any
@@ -308,10 +301,10 @@ func TestSumHandler(t *testing.T) {
 		{TestSumOperation{[]any{1, 2, 3, 4, 5}}, 15},
 		{TestSumOperation{[]any{1, -1, 0, 1, -1}}, 0},
 		{TestSumOperation{[]any{1, 2, 3, -4, -5}}, -3},
-		{TestSumOperation{[]any{5, string('b')}}, v.Error()},
-		{TestSumOperationInvalidkey{[]any{string('a'), 5}}, k.Error()},
-		{TestSumOperationInvalidkey{[]any{1, 2}}, k.Error()},
-		{"This is a string request", k.Error()},
+		{TestSumOperation{[]any{5, string('b')}}, ErrInvalidSOValues},
+		{TestSumOperationInvalidkey{[]any{string('a'), 5}}, ErrInvalidKeys},
+		{TestSumOperationInvalidkey{[]any{1, 2}}, ErrInvalidKeys},
+		{"This is a string request", ErrInvalidKeys},
 	}
 	for i, tt := range tests {
 		// Encode the data to JSON
@@ -335,10 +328,10 @@ func TestSumHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read response body: %v", err)
 			}
-			if strings.TrimSpace(string(body)) != tt.expected {
+			if reflect.DeepEqual(body, tt.expected) {
 				t.Fatalf("At test case %v, For Bad Request Expected response to be %s, got %s", i+1, tt.expected, string(body))
 			}
-			return
+			continue
 		}
 
 		// Read and Decode the response JSON
