@@ -20,12 +20,12 @@ const loggerKey = contextKey("logger")
 func Ratelimit(next http.Handler) http.Handler {
 	rate := rate.Limit(1)
 	burst := 5
-	limiter := ratelimit.NewIPRateLimiter(rate, burst)
+	rateLimiter := ratelimit.NewIPRateLimiter(rate, burst)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := GetLogger(r)
-		limiter := limiter.GetLimiter(r.RemoteAddr)
-		if !limiter.Allow() {
+		IpLimiter := rateLimiter.GetLimiter(r.RemoteAddr)
+		if !IpLimiter.Allow() {
 			logger.Error("Rate limit exceeded", slog.String("ip", r.RemoteAddr))
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 			return

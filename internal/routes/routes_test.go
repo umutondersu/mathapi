@@ -40,11 +40,13 @@ func TestEchoHandler(t *testing.T) {
 		{0, "Received request for item: 0"},
 	}
 
+	router := NewRouter()
+
 	for _, tt := range tests {
 		req := httptest.NewRequest("GET", fmt.Sprintf("/echo/%d", tt.request), nil)
 		w := httptest.NewRecorder()
 
-		handleEcho(w, req)
+		router.ServeHTTP(w, req)
 
 		resp := w.Result()
 		defer resp.Body.Close()
